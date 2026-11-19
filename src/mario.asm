@@ -17,18 +17,11 @@
 
 ; ---- 2. Program entry point ---------------------------------------------
 start:
-        push cs
-        pop  ds
-                call SetTextMode
-
-        call .get_message_address
-.get_message_address:
-        pop  dx
-        add  dx, msg_module1_ok - .get_message_address
-
-        push dx
-        call PrintString
-        call ExitToDos
+        call SetVideoMode13             ; Module 2: enter VGA mode 13h
+        call DrawTestScreen             ; Module 2: show the 12 game colours
+        mov  ah, 0                      ; BIOS keyboard service 0 = wait for
+        int  16h                        ; a key (keeps the screen visible)
+        call ExitToDos                  ; restores text mode, returns to DOS
 
 ; ---- 3. Module 1 procedures ---------------------------------------------
 
