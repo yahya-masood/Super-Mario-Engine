@@ -18,10 +18,13 @@
 ; ---- 2. Program entry point ---------------------------------------------
 start:
         call SetVideoMode13             ; Module 2: enter VGA mode 13h
-        call DrawTestScreen             ; Module 2: show the 12 game colours
-        mov  ah, 0                      ; BIOS keyboard service 0 = wait for
-        int  16h                        ; a key (keeps the screen visible)
-        call ExitToDos                  ; restores text mode, returns to DOS
+        call ResetMap                   ; Module 3: restore original map
+        mov  ax, 0                      ; first map column = 0
+        push ax
+        call DrawMap                    ; draw visible level window
+        mov  ah, 0                      ; BIOS keyboard service: wait for key
+        int  16h
+        call ExitToDos                  ; restore text mode and exit
 
 ; ---- 3. Module 1 procedures ---------------------------------------------
 
