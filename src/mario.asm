@@ -18,6 +18,7 @@
 ; ---- 2. Program entry point ---------------------------------------------
 start:
         call InitFrameBuffer
+        call InstallKeyboardHandler     ; Module 7: our own INT 09h routine
         call SetVideoMode13
 
         call ResetMap
@@ -35,11 +36,15 @@ start:
         push ax
         call DrawSprite
 
-        call CopyFrameToScreen
+                call CopyFrameToScreen
 
-        mov  ah, 0
-        int  16h
+.wait_for_escape:
+        cmp  byte [key_table+KEY_ESC], 0
+        je   .wait_for_escape
+
         call ExitToDos
+
+        
 
 ; ---- 3. Module 1 procedures ---------------------------------------------
 
@@ -75,10 +80,21 @@ PrintString:
 
 ; Procedure: ExitToDos
 ; Purpose: Return control to DOS.
+; --------------------------------------------------------------------------
+; Procedure : ExitToDos
+; Purpose   : End the program and return to the DOS prompt (INT 21h, 4Ch).
+;             Every exit path of the game ends here.
+; Inputs    : none
+; Outputs   : never returns
+; Registers : AX changed (program ends, so it does not matter)
+; Note      : Restores the keyboard vector (Module 7) and text mode.
+;             LATER (Module 8) the timer vector is restored here too.
+; --------------------------------------------------------------------------
 ExitToDos:
-        
-        mov  ah, DOS_EXIT_FUNCTION
-        mov  al, 0
+        call RemoveKeyboardHandler      ; give INT 09h back to the BIOS
+        call SetTextMode                ; always leave in text mode
+        mov  ah, DOS_EXIT_FUNCTION      ; AH = 4Ch : terminate program
+        mov  al, 0                      ; AL = return code 0 (no error)
         int  21h
 
 ; ---- 4. Code files -------------------------------------------------------
