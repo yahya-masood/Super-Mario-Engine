@@ -1,4 +1,3 @@
-; map.asm - owner: Yahya Masood - stub, filled in later
 ; ==========================================================================
 ; FILE    : src/map.asm
 ; OWNER   : Yahya Masood (Module 3)
@@ -48,16 +47,21 @@ DrawTile:
 
 ; --------------------------------------------------------------------------
 ; Procedure : DrawMap
-; Purpose   : Draw 20 columns x 12 rows of the working map, starting at the
-;             given map column. Tile (0,0) of the window is drawn at the top
-;             left corner of the screen. No pixel scrolling (Module 6).
-; Inputs    : push first_column (0 to 40)
-;             [bp+4] = first map column to draw
+; Purpose   : Draw the visible part of the working map for a camera position.
+;             First tile column = camera_x / 16 (shift right 4 times).
+;             The whole picture is moved left by camera_x mod 16 pixels
+;             (camera_x AND 15), so it scrolls one pixel at a time and not
+;             one tile at a time. That is why 20 columns plus one partial
+;             column are drawn (21). When camera_x mod 16 = 0, 20 are enough.
+; Inputs    : push camera_x (0 to 640)
+;             [bp+4] = camera_x
 ; Outputs   : none
 ; Registers : none changed (AX, BX, CX, DX, SI, DI, BP saved and restored)
 ; Logic     : SI = address of the current tile in working_map
-;             BX = screen x, DX = screen y
-;             CX = columns left in this row, DI = rows left
+;             BX = screen x of the current tile. It starts at
+;                  -(camera_x mod 16), so it can be negative. PutPixel
+;                  ignores the pixels that are off the screen.
+;             DX = screen y, CX = columns left, DI = rows left
 ; Note      : "ret 2" removes the 1 parameter word from the stack.
 ; --------------------------------------------------------------------------
 DrawMap:
@@ -70,13 +74,23 @@ DrawMap:
         push si
         push di
 
+        mov  ax, [bp+4]                 ; AX = camera_x
+        shr  ax, 1                      ; divide by 16 = shift right 4 times
+        shr  ax, 1
+        shr  ax, 1
+        shr  ax, 1                      ; AX = first map column to draw
         mov  si, working_map            ; SI = start of row 0 of the map
-        add  si, [bp+4]                 ; SI = tile (first_column, row 0)
+        add  si, ax                     ; SI = tile (first column, row 0)
         mov  dx, 0                      ; DX = screen y of the first row
         mov  di, LEVEL_ROWS             ; DI = rows left (12)
 .row_loop:
-        mov  bx, 0                      ; BX = screen x of the first column
+        mov  bx, [bp+4]                 ; BX = camera_x
+        and  bx, 15                     ; BX = camera_x mod 16
+        neg  bx                         ; BX = screen x of the first tile
         mov  cx, VISIBLE_COLS           ; CX = columns left (20)
+        test word [bp+4], 15            ; is camera_x mod 16 not zero?
+        jz   .col_loop                  ; zero: 20 columns are enough
+        inc  cx                         ; not zero: draw 1 extra column
 .col_loop:
         push bx                         ; DrawTile parameter 1: x
         push dx                         ; DrawTile parameter 2: y
@@ -88,7 +102,11 @@ DrawMap:
         add  bx, TILE_SIZE              ; next screen x (16 pixels right)
         dec  cx
         jnz  .col_loop
-        add  si, LEVEL_COLS-VISIBLE_COLS ; skip the 40 columns not drawn
+        add  si, LEVEL_COLS-VISIBLE_COLS ; go to the same column, next row
+        test word [bp+4], 15            ; were 21 columns read?
+        jz   .next_row
+        dec  si                         ; yes: step back the extra column
+.next_row:
         add  dx, TILE_SIZE              ; next screen y (16 pixels down)
         dec  di
         jnz  .row_loop
@@ -168,18 +186,17 @@ ResetMap:
         push cx
         push si
         push di
-        push es
+        push es                         ; save the caller's ES
 
-        push ds
-        pop  es
-        cld
+        push ds                         ; ES = DS (a segment register cannot
+        pop  es                         ; be loaded directly from another)
+        cld                             ; direction flag = 0: SI, DI go up
+        mov  si, original_map           ; source
+        mov  di, working_map            ; destination
+        mov  cx, LEVEL_SIZE             ; number of bytes to copy (720)
+        rep  movsb                      ; copy CX bytes from [SI] to [ES:DI]
 
-        mov  si, original_map
-        mov  di, working_map
-        mov  cx, LEVEL_SIZE
-        rep  movsb
-
-        pop  es
+        pop  es                         ; restore the caller's ES
         pop  di
         pop  si
         pop  cx
