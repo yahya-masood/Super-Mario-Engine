@@ -11,7 +11,12 @@ exit_requested      db 0
 
 ; ---- Camera --------------------------------------------------------------
 camera_x            dw 0
+; ---- Frame buffer (Module 5) ---------------------------------------------
+framebuffer_segment dw 0                ; segment of the off-screen buffer,
+                                        ; set by InitFrameBuffer
 
+; ---- Message printed if the buffer cannot be allocated -------------------
+msg_no_memory       db 'Not enough memory for the frame buffer.', 13, 10, '$'
 ; ---- Clock ---------------------------------------------------------------
 tick_counter        dw 0
 time_left           dw 300

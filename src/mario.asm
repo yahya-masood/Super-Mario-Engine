@@ -17,14 +17,29 @@
 
 ; ---- 2. Program entry point ---------------------------------------------
 start:
-        call SetVideoMode13             ; Module 2: enter VGA mode 13h
-        call ResetMap                   ; Module 3: restore original map
-        mov  ax, 0                      ; first map column = 0
+        call InitFrameBuffer
+        call SetVideoMode13
+
+        call ResetMap
+        mov  ax, 0
         push ax
-        call DrawMap                    ; draw visible level window
-        mov  ah, 0                      ; BIOS keyboard service: wait for key
+        call DrawMap
+
+        mov  ax, 100
+        push ax
+        mov  ax, 100
+        push ax
+        mov  ax, sprite_mario_stand
+        push ax
+        mov  ax, 0
+        push ax
+        call DrawSprite
+
+        call CopyFrameToScreen
+
+        mov  ah, 0
         int  16h
-        call ExitToDos                  ; restore text mode and exit
+        call ExitToDos
 
 ; ---- 3. Module 1 procedures ---------------------------------------------
 

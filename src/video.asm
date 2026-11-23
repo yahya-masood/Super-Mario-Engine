@@ -1,9 +1,13 @@
 ; ==========================================================================
 ; FILE    : src/video.asm
-; OWNER   : Yahya Masood (Module 2)
+; OWNER   : Yahya Masood (Module 2, changed in Module 5)
 ; PURPOSE : VGA Mode 13h setup, PutPixel, FillRect and a colour test screen.
 ;           Mode 13h: 320x200 pixels, 1 byte per pixel, segment 0A000h.
 ;           Offset of pixel (x, y) = y*320 + x = (y*256) + (y*64) + x.
+; MODULE 5: PutPixel now draws into the OFF-SCREEN FRAME BUFFER (segment in
+;           framebuffer_segment), not into video memory. Nothing appears on
+;           the screen until CopyFrameToScreen (framebuf.asm) is called.
+;           InitFrameBuffer must have been called before any drawing.
 ; NOTE    : SetTextMode is in mario.asm (Module 1), not repeated here.
 ;           Parameters go on the stack (pushed left to right).
 ;           Only basic 8086 instructions are used: no immediate PUSH, no
@@ -32,8 +36,9 @@ SetVideoMode13:
 
 ; --------------------------------------------------------------------------
 ; Procedure : PutPixel
-; Purpose   : Draw one pixel of the given colour at (x, y).
-;             Pixels outside the screen are ignored (no memory damage).
+; Purpose   : Draw one pixel of the given colour at (x, y) in the frame
+;             buffer. Pixels outside the screen are ignored (no memory
+;             damage).
 ; Inputs    : push x, push y, push colour (only the low byte is used)
 ;             [bp+8] = x   [bp+6] = y   [bp+4] = colour
 ; Outputs   : none
@@ -75,10 +80,10 @@ PutPixel:
         add  bx, dx                     ; BX = y*256 + y*64 = y * 320
         add  bx, ax                     ; BX = y*320 + x = pixel offset
 
-        mov  ax, VIDEO_SEGMENT          ; ES = video memory segment
+        mov  ax, [framebuffer_segment]  ; ES = segment of the frame buffer
         mov  es, ax                     ; (a segment cannot be loaded directly)
         mov  al, [bp+4]                 ; AL = colour
-        mov  [es:bx], al                ; write the pixel
+        mov  [es:bx], al                ; write the pixel into the buffer
 
 .done:
         pop  es
