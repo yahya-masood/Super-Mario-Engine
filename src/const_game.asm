@@ -1,4 +1,3 @@
-; const_game.asm - owner: Sami Ahsan - stub, filled in later
 ; ==========================================================================
 ; FILE    : src/const_game.asm
 ; OWNER   : Sami Ahsan (Module 1)
@@ -68,6 +67,15 @@ SPEED_GOOMBA        equ 0080h           ; 0.5  (whole 0, fraction 80h)
 SPEED_KOOPA         equ 00C0h           ; 0.75 (whole 0, fraction C0h)
 SPEED_SHELL         equ 0300h           ; 3.0  (whole 3, fraction 00h)
 SPEED_MUSHROOM      equ 0100h           ; 1.0  (whole 1, fraction 00h)
+
+; ---- DrawSprite flags (Module 4). DESIGN: the PDF gives no flag values ---
+; The 4th parameter of DrawSprite is a word. Each flag is one bit; add the
+; flags you want together (example: SPRITE_MIRROR + SPRITE_TALL).
+SPRITE_MIRROR       equ 1               ; bit 0: draw flipped left-right
+SPRITE_HALF         equ 2               ; bit 1: half-transparent (every
+                                        ;        second pixel, used to blink)
+SPRITE_TALL         equ 4               ; bit 2: sprite has 32 rows (Super
+                                        ;        Mario) instead of 16
 
 ; ---- Enemy record layout (Section 5.5). DESIGN, PROVISIONAL --------------
 ; Each constant is the OFFSET of a field from the start of one record.
