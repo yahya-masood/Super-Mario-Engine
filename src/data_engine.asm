@@ -18,9 +18,11 @@ framebuffer_segment dw 0                ; segment of the off-screen buffer,
 ; ---- Message printed if the buffer cannot be allocated -------------------
 msg_no_memory       db 'Not enough memory for the frame buffer.', 13, 10, '$'
 ; ---- Clock ---------------------------------------------------------------
-tick_counter        dw 0
-time_left           dw 300
-ticks_this_second   db 0
+tick_counter        dw 0                ; increased by the timer interrupt
+time_left           dw 300              ; level clock, counts down to 0
+ticks_this_second   db 0                ; ticks counted towards one second
+last_tick_seen      dw 0                ; tick_counter value WaitForTick saw last
+clock_running       db 0                ; 1 = clock counts, 0 = frozen
 
 ; ---- Keyboard ------------------------------------------------------------
 key_table           times 128 db 0

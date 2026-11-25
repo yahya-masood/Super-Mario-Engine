@@ -19,6 +19,7 @@
 start:
         call InitFrameBuffer
         call InstallKeyboardHandler     ; Module 7: our own INT 09h routine
+        call InstallTimerHandler
         call SetVideoMode13
 
         call ResetMap
@@ -38,9 +39,15 @@ start:
 
                 call CopyFrameToScreen
 
-.wait_for_escape:
+        ; Module 8: start the game clock for the new life
+        mov  word [time_left], 300
+        mov  byte [ticks_this_second], 0
+        mov  byte [clock_running], 1
+
+.game_loop:
+        call WaitForTick
         cmp  byte [key_table+KEY_ESC], 0
-        je   .wait_for_escape
+        je   .game_loop
 
         call ExitToDos
 
@@ -88,9 +95,10 @@ PrintString:
 ; Outputs   : never returns
 ; Registers : AX changed (program ends, so it does not matter)
 ; Note      : Restores the keyboard vector (Module 7) and text mode.
-;             LATER (Module 8) the timer vector is restored here too.
+;             The timer vector and PIT rate are also restored here.
 ; --------------------------------------------------------------------------
 ExitToDos:
+        call RemoveTimerHandler
         call RemoveKeyboardHandler      ; give INT 09h back to the BIOS
         call SetTextMode                ; always leave in text mode
         mov  ah, DOS_EXIT_FUNCTION      ; AH = 4Ch : terminate program

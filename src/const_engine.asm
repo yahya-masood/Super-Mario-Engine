@@ -87,3 +87,5 @@ STATE_LEVEL_COMPLETE   equ 6
 STATE_GAME_OVER        equ 7
 STATE_EXIT             equ 8
 STATE_COUNT            equ 9
+; ---- Timer (Module 8) ----------------------------------------------------
+TICKS_PER_SECOND    equ 30
