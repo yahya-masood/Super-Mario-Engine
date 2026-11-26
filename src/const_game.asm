@@ -54,6 +54,9 @@ POSE_JUMP           equ 2
 ; Negative values are two's complement: -5.5 * 256 = -1408 = 0FA80h.
 PHYS_WALK_ACCEL     equ 0020h           ;  0.125 px/frame, direction held
 PHYS_FRICTION       equ 0010h           ;  0.0625, no direction held
+PHYS_BRAKE          equ 0040h           ;  0.25 DESIGN: opposite key held. PDF 5.2 says
+                                        ;  braking is faster than friction but A.5
+                                        ;  gives no value: 2 x walk accel, 4 x friction
 PHYS_MAX_WALK       equ 0180h           ;  1.5
 PHYS_MAX_RUN        equ 0280h           ;  2.5 (Left Shift held)
 PHYS_GRAVITY        equ 0040h           ;  0.25 added to vy every frame
@@ -95,8 +98,6 @@ ENEMY_KOOPA         equ 2               ; type: Koopa (a shell is a STATE
                                         ; of a Koopa, not a separate type)
 
 ; ---- PENDING (intentionally NOT defined yet) -----------------------------
-; PHYS_BRAKE          : PDF 5.2 says braking is faster than friction, but
-;                       Appendix A.5 gives no value.
 ; TICKS_PER_SECOND    : and every constant built from it (invulnerability
 ;                       2 s, flat Goomba 1 s, death animation 1.5 s, Life-lost
 ;                       screen 2 s, win slide 1 s, win walk 1 s).
