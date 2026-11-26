@@ -37,7 +37,7 @@ start:
         push ax
         call DrawSprite
 
-                call CopyFrameToScreen
+        call CopyFrameToScreen
 
         ; Module 8: start the game clock for the new life
         mov  word [time_left], 300
@@ -50,8 +50,6 @@ start:
         je   .game_loop
 
         call ExitToDos
-
-        
 
 ; ---- 3. Module 1 procedures ---------------------------------------------
 
@@ -101,8 +99,8 @@ ExitToDos:
         call RemoveTimerHandler
         call RemoveKeyboardHandler      ; give INT 09h back to the BIOS
         call SetTextMode                ; always leave in text mode
-        mov  ah, DOS_EXIT_FUNCTION      ; AH = 4Ch : terminate program
-        mov  al, 0                      ; AL = return code 0 (no error)
+        mov  ah, DOS_EXIT_FUNCTION
+        mov  al, 0
         int  21h
 
 ; ---- 4. Code files -------------------------------------------------------
