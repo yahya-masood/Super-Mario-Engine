@@ -36,6 +36,15 @@ hp                  db HP_SMALL         ; 1 byte, 1 or 2
 invuln_timer        dw 0                ; 2 bytes, blink time left
                                         ; (unit PENDING until timer design)
 stomp_chain         db 0                ; 1 byte, stomps since last landing
+; ---- Hero collision data (Module 10) -------------------------------------
+hero_box_left       dw 0                ; left edge of hero hitbox
+hero_box_right      dw 0                ; right edge of hero hitbox
+hero_box_top        dw 0                ; top edge of hero hitbox
+hero_box_bottom     dw 0                ; bottom edge of hero hitbox
+
+head_hit            db 0                ; 1 = hero hit a tile from below
+head_hit_x          dw 0                ; world x of the head collision
+head_hit_y          dw 0                ; world y of the head collision
 
 ; ---- Score, coins, lives (Section 5.4; Module 13) ------------------------
 score_lo            dw 0                ; 32-bit score, low word  (first)
