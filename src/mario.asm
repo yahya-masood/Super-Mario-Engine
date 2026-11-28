@@ -41,6 +41,7 @@ start:
         call CopyFrameToScreen
         call ResetMap  ; Module 3: working map = original map
         call ResetEnemies                 
+        call ResetBlockItems            ; Module 12: no mushrooms, no coin pop
         call ClearFrameBuffer           ; the bottom 8 rows stay black
 
        ; Module 8: start the game clock for the new life
@@ -51,15 +52,18 @@ start:
         ; ---- Main loop (frame order of PDF 5.13). Module 14 will replace
         ;      this loop by the state machine. ------------------------------
 .game_loop:
-        call WaitForTick                ; step 1: wait for next frame
+                call UpdateHero
+        call HandleHeadHit              ; Module 12
+        call CollectCoins               ; Module 12
 
-        call UpdateHero                 ; step 3: Mario physics and collision
+        call UpdateEnemies
+        call UpdateMushrooms            ; Module 12
 
-        call UpdateEnemies              ; step 4: move Goombas and Koopas
+        call ResolveHeroEnemies
+        call ResolveHeroMushrooms       ; Module 12
 
-        call ResolveHeroEnemies         ; step 5: Mario vs enemy collision
-
-        call UpdateInvulnerability      ; step 6: update damage protection
+        call UpdateInvulnerability
+        call UpdatePopCoin              ; Module 12
         mov  ax, [hero_x]               ; step 8: Module 6 camera
         push ax
         call UpdateCamera
@@ -76,16 +80,24 @@ start:
         mov  ax, [camera_x]             ; step 9: draw the level and Mario
         push ax
         call DrawMap
-                call DrawEnemies                ; step 9: draw enemies on framebuffer
+        call DrawPopCoin                ; Module 12
+        call DrawMushrooms              ; Module 12
+        call DrawEnemies                ; step 9: draw enemies on framebuffer
 
-        mov  bh, [hero_pose]            ; BX = pose * 256: the sprites are in
+                mov  bh, [hero_pose]            ; BX = pose * 256: the sprites are in
         mov  bl, 0                      ; the order stand, run, jump
         mov  ax, sprite_mario_stand
-        add  ax, bx                     ; AX = address of the sprite
         mov  dx, 0                      ; flags: facing right
+        cmp  byte [form], FORM_SUPER
+        jne  .small_sprite
+        shl  bx, 1                      ; Super sprites have 32 rows: pose * 512
+        mov  ax, sprite_super_stand
+        mov  dx, SPRITE_TALL            ; flags: 32 rows
+.small_sprite:
+        add  ax, bx                     ; AX = address of the sprite
         cmp  byte [hero_facing], FACING_LEFT
         jne  .face_done
-        mov  dx, SPRITE_MIRROR          ; facing left: mirrored
+        or   dx, SPRITE_MIRROR          ; facing left: mirrored
 .face_done:
         mov  bx, [hero_x]               ; screen x = world x - camera x
         sub  bx, [camera_x]

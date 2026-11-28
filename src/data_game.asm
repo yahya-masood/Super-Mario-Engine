@@ -76,3 +76,12 @@ enemy_start_table:
 ; Stomp 11 and more give a 1-UP and no points (checked in StompScore).
 stomp_points:
         dw 100, 200, 400, 500, 800, 1000, 2000, 4000, 5000, 8000
+; ---- Mushrooms (Module 12) -----------------------------------------------
+; Same 12 byte record layout as the enemies (ENEMY_TYPE, ENEMY_X ...).
+; 2 records x 12 bytes = 24 bytes. All zero = every slot empty.
+mushroom_table      times MAX_MUSHROOMS*ENEMY_RECORD_SIZE db 0
+
+; ---- Coin that jumps out of a "?" block (Module 12) ----------------------
+coin_pop_timer      db 0                ; 1 byte, frames left (0 = no coin)
+coin_pop_x          dw 0                ; 2 bytes, world x of the block
+coin_pop_y          dw 0                ; 2 bytes, world y of the tile above it

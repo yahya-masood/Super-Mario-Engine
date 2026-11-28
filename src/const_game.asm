@@ -96,7 +96,8 @@ ENEMY_NONE          equ 0               ; type: empty record
 ENEMY_GOOMBA        equ 1               ; type: Goomba
 ENEMY_KOOPA         equ 2               ; type: Koopa (a shell is a STATE
                                         ; of a Koopa, not a separate type)
-
+ENEMY_MUSHROOM      equ 3               ; type: mushroom (Module 12; lives in
+                                        ; mushroom_table, not in enemy_table)
 ; ---- Enemy states (Section 5.5). DESIGN: the PDF names them, no numbers --
 ENEMY_STATE_WAITING     equ 0           ; stands still until near the screen
 ENEMY_STATE_WALKING     equ 1           ; Goomba or Koopa walking
@@ -117,7 +118,14 @@ ENEMY_START_COUNT   equ 6               ; enemies in this level (4 Goombas,
                                         ; 2 Koopas)
 STOMP_CHAIN_MAX     equ 10              ; stomp 11 and more give a 1-UP
 PHYS_STOMP_BOUNCE_HELD equ 0FB00h       ; -5.0 higher bounce, Space held (5.6)
-
+; ---- Blocks, coins and power-ups (Module 12) -----------------------------
+; DESIGN: the point values and counts below are our own decisions.
+MAX_MUSHROOMS       equ 2               ; mushroom records active at once
+COIN_POINTS         equ 200             ; a coin (from the map or a "?" block)
+BRICK_POINTS        equ 50              ; Super Mario breaks a brick
+MUSHROOM_POINTS     equ 1000            ; collecting a mushroom
+COIN_POP_FRAMES     equ 14              ; frames the coin jumps out of a block
+COIN_POP_RISE       equ 3               ; pixels per frame it rises
 ; ---- PENDING (intentionally NOT defined yet) -----------------------------
 ; TICKS_PER_SECOND is now defined in const_engine.asm (30). Still pending,
 ; built from it: death animation 1.5 s, Life-lost screen 2 s, win slide 1 s,
