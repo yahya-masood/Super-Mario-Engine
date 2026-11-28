@@ -1,3 +1,4 @@
+
 ; ==========================================================================
 ; FILE    : src/mario.asm
 ; PROJECT : Super Mario Engine (COAL semester project)
@@ -7,8 +8,8 @@
 ; BUILD   : build.bat
 ; ==========================================================================
 
-        bits 16
-        org  100h
+bits 16
+       org  100h
 
 ; ---- 1. Constants --------------------------------------------------------
 %include "const_engine.asm"
@@ -16,25 +17,49 @@
 
 ; ---- 2. Program entry point ---------------------------------------------
 start:
-        call InitFrameBuffer
-        call InstallKeyboardHandler     ; Module 7: our own INT 09h routine
+       call InitFrameBuffer
+       call InstallKeyboardHandler     ; Module 7: our own INT 09h routine
+        
         call InstallTimerHandler        ; Module 8: timer tick and game clock
-        call SetVideoMode13
+       call SetVideoMode13
 
-        call ResetMap                   ; Module 3: working map = original map
+        call ResetMap
+        mov  ax, 0
+        push ax
+        call DrawMap
+
+        mov  ax, 100
+        push ax
+        mov  ax, 100
+        push ax
+        mov  ax, sprite_mario_stand
+        push ax
+        mov  ax, 0
+        push ax
+        call DrawSprite
+
+        call CopyFrameToScreen
+        call ResetMap  ; Module 3: working map = original map
+        call ResetEnemies                 
         call ClearFrameBuffer           ; the bottom 8 rows stay black
 
-        ; Module 8: start the game clock for the new life
-        mov  word [time_left], 300
-        mov  byte [ticks_this_second], 0
-        mov  byte [clock_running], 1
+       ; Module 8: start the game clock for the new life
+       mov  word [time_left], 300
+       mov  byte [ticks_this_second], 0
+       mov  byte [clock_running], 1
 
         ; ---- Main loop (frame order of PDF 5.13). Module 14 will replace
         ;      this loop by the state machine. ------------------------------
 .game_loop:
-        call WaitForTick                ; step 1: wait for the next timer tick
-        call UpdateHero                 ; step 3: Modules 9 + 10 (physics, collision)
+        call WaitForTick                ; step 1: wait for next frame
 
+        call UpdateHero                 ; step 3: Mario physics and collision
+
+        call UpdateEnemies              ; step 4: move Goombas and Koopas
+
+        call ResolveHeroEnemies         ; step 5: Mario vs enemy collision
+
+        call UpdateInvulnerability      ; step 6: update damage protection
         mov  ax, [hero_x]               ; step 8: Module 6 camera
         push ax
         call UpdateCamera
@@ -51,6 +76,7 @@ start:
         mov  ax, [camera_x]             ; step 9: draw the level and Mario
         push ax
         call DrawMap
+                call DrawEnemies                ; step 9: draw enemies on framebuffer
 
         mov  bh, [hero_pose]            ; BX = pose * 256: the sprites are in
         mov  bl, 0                      ; the order stand, run, jump
@@ -87,52 +113,57 @@ start:
 .no_marker:
         call CopyFrameToScreen          ; step 10: show the finished frame
 
-        call CheckHeroPit               ; step 7: pit or flag pole ends the run
+                call CheckHeroPit
         cmp  ax, 0
         jne  .stopped
+
         call CheckHeroFlag
         cmp  ax, 0
         jne  .stopped
-        cmp  byte [key_table+KEY_ESC], 0
-        je   .game_loop
+
+        cmp  byte [hp], 0
+        je   .stopped
+       cmp  byte [key_table+KEY_ESC], 0
+       je   .game_loop
+
         jmp  .leave
 .stopped:
         cmp  byte [key_table+KEY_ESC], 0
         je   .stopped                   ; freeze until Esc is pressed
 .leave:
-        call ExitToDos
+       call ExitToDos
 
 ; ---- 3. Module 1 procedures ---------------------------------------------
 
 ; Procedure: SetTextMode
 ; Purpose: Switch to 80x25 text mode.
 SetTextMode:
-        push ax
-        push bp
-        push si
-        push di
-        mov  ax, BIOS_TEXT_MODE
-        int  10h
-        pop  di
-        pop  si
-        pop  bp
-        pop  ax
-        ret
+       push ax
+       push bp
+       push si
+       push di
+       mov  ax, BIOS_TEXT_MODE
+       int  10h
+       pop  di
+       pop  si
+       pop  bp
+       pop  ax
+       ret
 
 ; Procedure: PrintString
 ; Input: [bp+4] = address of text ending with '$'
 PrintString:
-        push bp
-        mov  bp, sp
-        push ax
-        push dx
-        mov  dx, [bp+4]
-        mov  ah, DOS_PRINT_STRING
-        int  21h
-        pop  dx
-        pop  ax
-        pop  bp
-        ret  2
+       push bp
+       mov  bp, sp
+       push ax
+       push dx
+       mov  dx, [bp+4]
+       mov  ah, DOS_PRINT_STRING
+       int  21h
+       pop  dx
+       pop  ax
+       pop  bp
+       ret  2
 
 ; Procedure: ExitToDos
 ; Purpose: Return control to DOS.
@@ -147,12 +178,12 @@ PrintString:
 ;             The timer vector and PIT rate are also restored here.
 ; --------------------------------------------------------------------------
 ExitToDos:
-        call RemoveTimerHandler
-        call RemoveKeyboardHandler      ; give INT 09h back to the BIOS
-        call SetTextMode                ; always leave in text mode
-        mov  ah, DOS_EXIT_FUNCTION
-        mov  al, 0
-        int  21h
+       call RemoveTimerHandler
+       call RemoveKeyboardHandler      ; give INT 09h back to the BIOS
+       call SetTextMode                ; always leave in text mode
+       mov  ah, DOS_EXIT_FUNCTION
+       mov  al, 0
+       int  21h
 
 ; ---- 4. Code files -------------------------------------------------------
 %include "video.asm"
