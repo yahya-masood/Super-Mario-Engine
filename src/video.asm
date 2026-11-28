@@ -95,55 +95,108 @@ PutPixel:
 
 ; --------------------------------------------------------------------------
 ; Procedure : FillRect
-; Purpose   : Fill a rectangle with one colour (calls PutPixel per pixel).
+; Purpose   : Fill a rectangle with one colour in the frame buffer.
+;             The rectangle is first CLIPPED to the screen (x and y may be
+;             negative or too big), then every row is filled with ONE
+;             REP STOSB instead of one PutPixel call per pixel. This is
+;             about 40 times faster, which the game needs: DrawMap draws
+;             the whole level with it in every frame.
 ; Inputs    : push x, push y, push width, push height, push colour
 ;             [bp+12] = x   [bp+10] = y   [bp+8] = width
 ;             [bp+6]  = height            [bp+4]  = colour
 ; Outputs   : none
-; Registers : none changed (BX, CX, DX, SI, BP saved and restored)
-; Logic     : DX = current row y, BX = current x, SI = colour,
-;             CX = rows left, then columns left. The rows-left count is
-;             saved on the stack while CX is reused for the columns.
+; Registers : none changed except the direction flag (CLD clears it).
+;             AX, BX, CX, DX, SI, DI, ES are saved and restored.
+; Logic     : BX = x, CX = width, DX = y, SI = height (after clipping)
+;             DI = offset of the first pixel = y*320 + x = y*256 + y*64 + x
+;             STOSB stores AL at [ES:DI] and adds 1 to DI (direction flag
+;             = 0); REP repeats it CX times, so one row is filled.
 ; Note      : "ret 10" removes the 5 parameter words from the stack.
 ; --------------------------------------------------------------------------
 FillRect:
         push bp
         mov  bp, sp
+        push ax
         push bx
         push cx
         push dx
         push si
+        push di
+        push es
 
-        mov  dx, [bp+10]                ; DX = y of the current row
-        mov  cx, [bp+6]                 ; CX = rows left (height)
-        mov  si, [bp+4]                 ; SI = colour
+        mov  bx, [bp+12]                ; BX = x
+        mov  cx, [bp+8]                 ; CX = width
+        cmp  bx, 0
+        jge  .left_ok                   ; x >= 0 (signed compare)
+        add  cx, bx                     ; x is negative: cut the width
+        mov  bx, 0                      ; and start at the left edge
+.left_ok:
+        mov  ax, SCREEN_WIDTH
+        sub  ax, bx                     ; AX = pixels from x to the right edge
+        cmp  cx, ax
+        jle  .width_ok
+        mov  cx, ax                     ; too wide: cut at the right edge
+.width_ok:
+        cmp  cx, 0
+        jle  .done                      ; nothing of it is on the screen
+
+        mov  dx, [bp+10]                ; DX = y
+        mov  si, [bp+6]                 ; SI = height = rows to fill
+        cmp  dx, 0
+        jge  .top_ok
+        add  si, dx                     ; y is negative: cut the height
+        mov  dx, 0                      ; and start at the top edge
+.top_ok:
+        mov  ax, SCREEN_HEIGHT
+        sub  ax, dx                     ; AX = rows from y to the bottom edge
+        cmp  si, ax
+        jle  .height_ok
+        mov  si, ax                     ; too high: cut at the bottom edge
+.height_ok:
+        cmp  si, 0
+        jle  .done                      ; nothing of it is on the screen
+
+        mov  di, dx                     ; DI = y
+        shl  di, 1                      ; y * 2
+        shl  di, 1                      ; y * 4
+        shl  di, 1                      ; y * 8
+        shl  di, 1                      ; y * 16
+        shl  di, 1                      ; y * 32
+        shl  di, 1                      ; y * 64
+        mov  ax, dx
+        shl  ax, 1                      ; y * 2
+        shl  ax, 1                      ; y * 4
+        shl  ax, 1                      ; y * 8
+        shl  ax, 1                      ; y * 16
+        shl  ax, 1                      ; y * 32
+        shl  ax, 1                      ; y * 64
+        shl  ax, 1                      ; y * 128
+        shl  ax, 1                      ; y * 256
+        add  di, ax                     ; y*64 + y*256 = y * 320
+        add  di, bx                     ; DI = y*320 + x = first pixel
+
+        mov  ax, [framebuffer_segment]  ; ES = segment of the frame buffer
+        mov  es, ax
+        mov  al, [bp+4]                 ; AL = colour
+        cld                             ; direction flag = 0: DI goes up
+        mov  dx, cx                     ; DX = width (CX is used by REP)
 .row_loop:
-        cmp  cx, 0                      ; no rows left?
-        je   .done
-        push cx                         ; save rows left
-        mov  bx, [bp+12]                ; BX = x of the first pixel in the row
-        mov  cx, [bp+8]                 ; CX = columns left (width)
-.col_loop:
-        cmp  cx, 0                      ; row finished?
-        je   .row_done
-        push bx                         ; parameter x
-        push dx                         ; parameter y
-        push si                         ; parameter colour
-        call PutPixel                   ; PutPixel removes its 3 parameters
-        inc  bx                         ; next pixel to the right
-        dec  cx
-        jmp  .col_loop
-.row_done:
-        pop  cx                         ; restore rows left
-        inc  dx                         ; next row down
-        dec  cx
-        jmp  .row_loop
+        push di                         ; remember the start of this row
+        mov  cx, dx                     ; CX = pixels in the row
+        rep  stosb                      ; fill the row
+        pop  di
+        add  di, SCREEN_WIDTH           ; next row: 320 bytes further
+        dec  si
+        jnz  .row_loop
 
 .done:
+        pop  es
+        pop  di
         pop  si
         pop  dx
         pop  cx
         pop  bx
+        pop  ax
         pop  bp
         ret  10
 

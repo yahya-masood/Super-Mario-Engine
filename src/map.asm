@@ -53,6 +53,9 @@ DrawTile:
 ;             (camera_x AND 15), so it scrolls one pixel at a time and not
 ;             one tile at a time. That is why 20 columns plus one partial
 ;             column are drawn (21). When camera_x mod 16 = 0, 20 are enough.
+;             The sky is drawn first with ONE FillRect and the sky tiles are
+;             skipped, so only the real tiles (ground, blocks, pipes ...) cost
+;             time. Without this the game ran far too slowly.
 ; Inputs    : push camera_x (0 to 640)
 ;             [bp+4] = camera_x
 ; Outputs   : none
@@ -74,6 +77,18 @@ DrawMap:
         push si
         push di
 
+        mov  ax, 0                      ; fill the whole visible area with the
+        push ax                         ; sky colour first (one fast FillRect):
+        push ax                         ; x = 0, y = 0,
+        mov  ax, SCREEN_WIDTH
+        push ax                         ; width = 320,
+        mov  ax, VISIBLE_HEIGHT
+        push ax                         ; height = 192,
+        mov  al, [tile_colours+TILE_SKY]
+        mov  ah, 0
+        push ax                         ; colour of the sky tile
+        call FillRect                   ; so the sky tiles need no drawing
+
         mov  ax, [bp+4]                 ; AX = camera_x
         shr  ax, 1                      ; divide by 16 = shift right 4 times
         shr  ax, 1
@@ -92,12 +107,15 @@ DrawMap:
         jz   .col_loop                  ; zero: 20 columns are enough
         inc  cx                         ; not zero: draw 1 extra column
 .col_loop:
-        push bx                         ; DrawTile parameter 1: x
-        push dx                         ; DrawTile parameter 2: y
         mov  al, [si]                   ; AL = tile code from the map
         mov  ah, 0
+        cmp  al, TILE_SKY               ; sky is already drawn: skip it
+        je   .next_tile
+        push bx                         ; DrawTile parameter 1: x
+        push dx                         ; DrawTile parameter 2: y
         push ax                         ; DrawTile parameter 3: tile code
         call DrawTile
+.next_tile:
         inc  si                         ; next tile in this map row
         add  bx, TILE_SIZE              ; next screen x (16 pixels right)
         dec  cx

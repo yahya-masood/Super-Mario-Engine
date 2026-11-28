@@ -1,4 +1,3 @@
-; hero.asm - owner: Sami Ahsan - stub, filled in later
 ; ==========================================================================
 ; FILE    : src/hero.asm
 ; OWNER   : Sami Ahsan (Module 9)
@@ -12,23 +11,28 @@
 ;           low byte = 1/256 pixel. A negative speed is two's complement.
 ;           Signed numbers are compared with JG/JL/JGE/JLE, positions
 ;           (unsigned) with JA/JB/JAE/JBE.
-; NOTE    : Tile collision is Module 10. Until then MoveHeroY uses ONE
-;           temporary floor (see there) so that Mario can land.
+; NOTE    : Tile collision (Module 10) is in collision.asm. UpdateHero
+;           calls ResolveHeroX after MoveHeroX and ResolveHeroY after
+;           MoveHeroY, so Mario moves one axis at a time (PDF 5.6 tip).
 ; ==========================================================================
 
 ; --------------------------------------------------------------------------
 ; Procedure : UpdateHero
 ; Purpose   : One frame of Mario's physics, in the order of PDF 5.13 step 3:
-;             horizontal speed, gravity and jump, move x, move y, pose.
+;             remember the feet, horizontal speed, gravity and jump,
+;             move x and resolve walls, move y and resolve floor/ceiling, pose.
 ; Inputs    : none (reads key_table and the hero variables)
 ; Outputs   : hero variables updated
 ; Registers : none changed
 ; --------------------------------------------------------------------------
 UpdateHero:
+        call SaveHeroFeet               ; Module 10: feet before this frame
         call UpdateHeroSpeedX           ; walk, run, brake, friction, facing
         call UpdateHeroSpeedY           ; gravity, jump, variable jump height
         call MoveHeroX                  ; x = x + vx (and level edges)
-        call MoveHeroY                  ; y = y + vy (and temporary floor)
+        call ResolveHeroX               ; Module 10: walls
+        call MoveHeroY                  ; y = y + vy
+        call ResolveHeroY               ; Module 10: floor, ceiling, head hit
         call UpdateHeroPose             ; which sprite to show
         ret
 
@@ -208,12 +212,10 @@ MoveHeroX:
 ; --------------------------------------------------------------------------
 ; Procedure : MoveHeroY
 ; Purpose   : Add the vertical speed to the position: y = y + vy (8.8 add).
-;             TEMPORARY FLOOR until Module 10 (tile collision) exists:
-;             Mario's top may not go below HERO_START_Y (feet on the ground
-;             line). When he reaches it, vy = 0 and on_ground = 1.
-;             on_ground is cleared first and set again only when he lands.
+;             Floor and ceiling are handled by ResolveHeroY (Module 10),
+;             which also sets on_ground.
 ; Inputs    : none
-; Outputs   : hero_y, hero_vy, on_ground
+; Outputs   : hero_y
 ; Registers : none changed (AX saved and restored)
 ; --------------------------------------------------------------------------
 MoveHeroY:
@@ -221,13 +223,7 @@ MoveHeroY:
 
         mov  ax, [hero_vy]
         add  [hero_y], ax               ; y = y + vy
-        mov  byte [on_ground], 0        ; in the air unless he lands below
-        cmp  word [hero_y], HERO_START_Y*256 ; below the floor? (unsigned)
-        jb   .done                      ; no: still in the air
-        mov  word [hero_y], HERO_START_Y*256 ; yes: stand on the floor
-        mov  word [hero_vy], 0
-        mov  byte [on_ground], 1
-.done:
+
         pop  ax
         ret
 
