@@ -97,9 +97,28 @@ ENEMY_GOOMBA        equ 1               ; type: Goomba
 ENEMY_KOOPA         equ 2               ; type: Koopa (a shell is a STATE
                                         ; of a Koopa, not a separate type)
 
+; ---- Enemy states (Section 5.5). DESIGN: the PDF names them, no numbers --
+ENEMY_STATE_WAITING     equ 0           ; stands still until near the screen
+ENEMY_STATE_WALKING     equ 1           ; Goomba or Koopa walking
+ENEMY_STATE_FLAT        equ 2           ; flattened Goomba (timer counts down)
+ENEMY_STATE_SHELL_STILL equ 3           ; Koopa shell, not moving
+ENEMY_STATE_SHELL_SLIDE equ 4           ; Koopa shell, sliding
+
+; ---- Timing, built from TICKS_PER_SECOND (const_engine.asm) --------------
+; One game frame = one timer tick, so a counter of ticks counts frames.
+INVULN_TICKS        equ 2*TICKS_PER_SECOND  ; about 2 s of blinking (5.7)
+FLAT_GOOMBA_TICKS   equ TICKS_PER_SECOND    ; about 1 s flat Goomba (5.5)
+
+; ---- Other enemy and stomp values. DESIGN: the PDF gives no number -------
+ENEMY_FALL_SPEED    equ 2               ; pixels per frame when an enemy falls
+                                        ; (the record has no vertical speed)
+ENEMY_START_Y       equ GROUND_TOP_Y-TILE_SIZE  ; top of an enemy on the ground
+ENEMY_START_COUNT   equ 6               ; enemies in this level (4 Goombas,
+                                        ; 2 Koopas)
+STOMP_CHAIN_MAX     equ 10              ; stomp 11 and more give a 1-UP
+PHYS_STOMP_BOUNCE_HELD equ 0FB00h       ; -5.0 higher bounce, Space held (5.6)
+
 ; ---- PENDING (intentionally NOT defined yet) -----------------------------
-; TICKS_PER_SECOND    : and every constant built from it (invulnerability
-;                       2 s, flat Goomba 1 s, death animation 1.5 s, Life-lost
-;                       screen 2 s, win slide 1 s, win walk 1 s).
-; ENEMY state values  : waiting, walking, flat, shell still, shell sliding.
-; Units of invuln_timer and ENEMY_TIMER.
+; TICKS_PER_SECOND is now defined in const_engine.asm (30). Still pending,
+; built from it: death animation 1.5 s, Life-lost screen 2 s, win slide 1 s,
+; win walk 1 s.

@@ -1,4 +1,3 @@
-; data_game.asm - owner: Sami Ahsan - stub, filled in later
 ; ==========================================================================
 ; FILE    : src/data_game.asm
 ; OWNER   : Sami Ahsan (Module 1)
@@ -36,15 +35,19 @@ hp                  db HP_SMALL         ; 1 byte, 1 or 2
 invuln_timer        dw 0                ; 2 bytes, blink time left
                                         ; (unit PENDING until timer design)
 stomp_chain         db 0                ; 1 byte, stomps since last landing
-; ---- Hero collision data (Module 10) -------------------------------------
-hero_box_left       dw 0                ; left edge of hero hitbox
-hero_box_right      dw 0                ; right edge of hero hitbox
-hero_box_top        dw 0                ; top edge of hero hitbox
-hero_box_bottom     dw 0                ; bottom edge of hero hitbox
 
-head_hit            db 0                ; 1 = hero hit a tile from below
-head_hit_x          dw 0                ; world x of the head collision
-head_hit_y          dw 0                ; world y of the head collision
+; ---- Hero hitbox (Module 10) - calculated by UpdateHeroBox ---------------
+; World pixel positions. The hitbox is 12 wide (2 pixels in from each side
+; of the 16 pixel sprite) and as tall as the form (16 or 32).
+hero_box_left       dw 0                ; 2 bytes, leftmost hitbox column
+hero_box_right      dw 0                ; 2 bytes, rightmost hitbox column
+hero_box_top        dw 0                ; 2 bytes, top pixel row
+hero_box_bottom     dw 0                ; 2 bytes, bottom pixel row (last one)
+
+; ---- Head hit report for Module 12 (set by ResolveHeroY every frame) -----
+head_hit            db 0                ; 1 byte, 1 = head hit a solid tile
+head_hit_x          dw 0                ; 2 bytes, world x of the head centre
+head_hit_y          dw 0                ; 2 bytes, world y, a row inside the tile
 
 ; ---- Score, coins, lives (Section 5.4; Module 13) ------------------------
 score_lo            dw 0                ; 32-bit score, low word  (first)
@@ -55,3 +58,21 @@ lives               db START_LIVES      ; 1 byte, 0 to 99
 ; ---- Enemy table (Section 5.5; Module 11) --------------------------------
 ; 8 records x 12 bytes = 96 bytes. All zero = every slot empty.
 enemy_table         times MAX_ENEMIES*ENEMY_RECORD_SIZE db 0
+
+; ---- Enemy start positions (Section 5.8 "reset to their start positions") -
+; One entry = 2 words: type, world x. All stand on the ground (y = ENEMY_START_Y).
+; Placed so that every rule can be tested (PDF 5.15): the Goomba at 384 walks
+; off the ledge into the pit, the Koopa at 672 turns at the pipe and the pit
+; edge, and the Koopa at 752 can kick its shell into the Goomba at 784.
+enemy_start_table:
+        dw ENEMY_GOOMBA, 160            ; early Goomba, near the start
+        dw ENEMY_GOOMBA, 288            ; Goomba before the first pit
+        dw ENEMY_GOOMBA, 384            ; Goomba on the ledge after the pit
+        dw ENEMY_KOOPA,  672            ; Koopa between the pipe and the pit
+        dw ENEMY_KOOPA,  752            ; Koopa before the stairs
+        dw ENEMY_GOOMBA, 784            ; Goomba next to that Koopa
+
+; ---- Stomp chain points (Section 5.4), index = stomps since last landing --
+; Stomp 11 and more give a 1-UP and no points (checked in StompScore).
+stomp_points:
+        dw 100, 200, 400, 500, 800, 1000, 2000, 4000, 5000, 8000
